@@ -1,6 +1,8 @@
 {
-    "explorer.fileNesting.enabled": true,
-    "explorer.fileNesting.patterns": {
-        "package.json": "pnpm-lock.yaml"
-    }
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "package.json": "pnpm-lock.yaml, LICENSE",
+    "Dockerfile": "docker-compose.yml, .dockerignore",
+    "README.md": "USAGE.md, CHANGELOG.md"
+  },
 }

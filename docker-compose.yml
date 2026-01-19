@@ -10,7 +10,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - API_TOKEN=${API_TOKEN:-your-secret-token-here}
+      - API_TOKEN=${API_TOKEN:-test-token-123}
       - ATTACHMENT_TTL=${ATTACHMENT_TTL:-3600000}
       - MAX_ATTACHMENT_SIZE=${MAX_ATTACHMENT_SIZE:-10485760}
       - ATTACHMENT_DIR=/app/attachments
