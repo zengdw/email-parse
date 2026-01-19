@@ -1,0 +1,6 @@
+node_modules/
+attachments/
+downloads/
+coverage/
+test-attachments/
+test-attachments-property/

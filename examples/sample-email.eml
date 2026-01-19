@@ -1,0 +1,69 @@
+From: 张三 <zhangsan@example.com>
+To: 李四 <lisi@example.com>, 王五 <wangwu@example.com>
+Cc: 赵六 <zhaoliu@example.com>
+Subject: 测试邮件 - 包含附件
+Date: Mon, 15 Jan 2024 10:30:00 +0800
+Message-ID: <sample-email-123@example.com>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary123"
+
+--boundary123
+Content-Type: multipart/alternative; boundary="alt-boundary"
+
+--alt-boundary
+Content-Type: text/plain; charset=utf-8
+
+这是一封测试邮件的纯文本内容。
+
+邮件包含以下信息：
+- 发件人：张三
+- 收件人：李四、王五
+- 抄送：赵六
+- 主题：测试邮件 - 包含附件
+
+这封邮件还包含一个文本附件，用于测试附件处理功能。
+
+--alt-boundary
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>测试邮件</title>
+</head>
+<body>
+    <h1>测试邮件</h1>
+    <p>这是一封测试邮件的 <strong>HTML</strong> 内容。</p>
+    
+    <h2>邮件信息</h2>
+    <ul>
+        <li><strong>发件人：</strong>张三</li>
+        <li><strong>收件人：</strong>李四、王五</li>
+        <li><strong>抄送：</strong>赵六</li>
+        <li><strong>主题：</strong>测试邮件 - 包含附件</li>
+    </ul>
+    
+    <p>这封邮件还包含一个文本附件，用于测试附件处理功能。</p>
+    
+    <hr>
+    <p><em>这是一封由邮件解析HTTP服务生成的测试邮件。</em></p>
+</body>
+</html>
+
+--alt-boundary--
+
+--boundary123
+Content-Type: text/plain; charset=utf-8
+Content-Disposition: attachment; filename="readme.txt"
+Content-Transfer-Encoding: base64
+
+6L+Z5piv5LiA5Liq5rWL6K+V6ZmE5Lu25paH5Lu244CCCgrmlofku7blhoXlrrnvvJoK4oCi5pyN
+5Yqh5Zmo5ZCN56ew77ya6YKu5Lu26Kej5p6QSFRUUOacjeWKoQrigKLniYjmnKzvvJp2MS4wLjAK
+4oCi5Yqf6IO977ya6YKu5Lu26Kej5p6Q44CB6ZmE5Lu25aSE55CG44CB6Ieq5Yqo5riF55CGCuKA
+ouS9nOiAhe+8muW8oOS4iQoK5L2/55So6K+05piO77yaCjEuIOiuvue9rueSrOWig+WPmOmHjyBB
+UElfVE9LRU4KMi4g5ZCv5Yqo5pyN5YqhCjMuIOiwg+eUqCBQT1NUIC9wYXJzZSDmjqXlj6Pop6P
+mnpDpgq7ku7YKNC4g6YCa6L+HIEdFVCAvYXR0YWNobWVudHMvOmlkIOaOpeWPo+S4i+i9vemdoueZ
+uwpCLiDmn6Xnnos6IGh0dHA6Ly9sb2NhbGhvc3Q6MzAwMC9oZWFsdGgKCuabtOWkmuS/oeaBr+iv
+t+WPguiAg+mhueebruaWh+aho+OAgg==
+
+--boundary123--
