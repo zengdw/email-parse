@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  email-parser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - API_TOKEN=${API_TOKEN:-your-secret-token-here}
+      - ATTACHMENT_TTL=${ATTACHMENT_TTL:-3600000}
+      - MAX_ATTACHMENT_SIZE=${MAX_ATTACHMENT_SIZE:-10485760}
+      - ATTACHMENT_DIR=/app/attachments
+    volumes:
+      # 可选：持久化附件存储
+      - attachments_data:/app/attachments
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  attachments_data:
