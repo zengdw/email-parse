@@ -351,32 +351,105 @@ pnpm test:watch
 - **fast-check**: 属性测试
 - **supertest**: HTTP 接口测试
 
+## CI/CD 自动化
+
+项目配置了GitHub Actions自动构建和发布Docker镜像：
+
+### 自动构建触发条件
+
+- **推送到主分支**: `main` 或 `develop` 分支的推送会触发构建
+- **标签发布**: 创建 `v*` 格式的标签会构建对应版本镜像
+- **Pull Request**: PR会构建但不推送镜像
+
+### 镜像标签策略
+
+- `latest`: 主分支最新版本
+- `v1.0.0`: 具体版本号
+- `v1.0`: 主要版本号
+- `v1`: 大版本号
+- `main`: 主分支构建
+- `develop`: 开发分支构建
+
+### 发布新版本
+
+```bash
+# 创建并推送标签
+git tag v1.0.3
+git push origin v1.0.3
+
+# GitHub Actions会自动构建并推送镜像到:
+# - ghcr.io/your-username/email-parse:v1.0.3
+# - ghcr.io/your-username/email-parse:v1.0
+# - ghcr.io/your-username/email-parse:v1
+# - ghcr.io/your-username/email-parse:latest
+```
+
 ## 部署指南
 
 ### Docker 部署
 
-创建 `Dockerfile`:
+#### 使用预构建镜像
 
-```dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY src/ ./src/
-
-EXPOSE 3000
-
-CMD ["npm", "start"]
-```
-
-构建和运行：
+从GitHub Container Registry拉取最新镜像：
 
 ```bash
+# 拉取最新镜像
+docker pull ghcr.io/your-username/email-parse:latest
+
+# 运行容器
+docker run -d \
+  --name email-parser \
+  -p 3000:3000 \
+  -e API_TOKEN=your-secret-token \
+  -e ATTACHMENT_TTL=3600000 \
+  -e MAX_ATTACHMENT_SIZE=10485760 \
+  ghcr.io/your-username/email-parse:latest
+```
+
+#### 本地构建
+
+```bash
+# 构建镜像
 docker build -t email-parser .
-docker run -p 3000:3000 -e API_TOKEN=your-token email-parser
+
+# 运行容器
+docker run -d \
+  --name email-parser \
+  -p 3000:3000 \
+  -e API_TOKEN=your-secret-token \
+  email-parser
+```
+
+#### 使用 Docker Compose
+
+```bash
+# 创建 .env 文件
+echo "API_TOKEN=your-secret-token" > .env
+
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f
+
+# 停止服务
+docker-compose down
+```
+
+#### Docker 环境变量
+
+所有环境变量都可以通过 `-e` 参数或 docker-compose.yml 文件设置：
+
+```bash
+docker run -d \
+  --name email-parser \
+  -p 3000:3000 \
+  -e API_TOKEN=your-secret-token \
+  -e PORT=3000 \
+  -e ATTACHMENT_TTL=7200000 \
+  -e MAX_ATTACHMENT_SIZE=20971520 \
+  -v $(pwd)/attachments:/app/attachments \
+  email-parser
 ```
 
 ### PM2 部署
