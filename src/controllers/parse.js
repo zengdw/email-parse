@@ -11,6 +11,39 @@ import {
 } from '../services/attachmentStorage.js';
 
 /**
+ * 将 ReadableStream<Uint8Array> 转换为 Buffer
+ * @param {ReadableStream<Uint8Array>} stream - 输入流
+ * @returns {Promise<Buffer>} 转换后的 Buffer
+ */
+async function streamToBuffer(stream) {
+  const reader = stream.getReader();
+  const chunks = [];
+  
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  
+  // 计算总长度
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  
+  // 合并所有 chunks
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.length;
+  }
+  
+  return Buffer.from(result);
+}
+
+/**
  * 验证请求体
  * @param {Buffer} body - 请求体数据
  * @returns {Object} 验证结果 { valid: boolean, error?: string }
@@ -101,8 +134,27 @@ async function processAttachments(attachments) {
  */
 export async function parseEmailHandler(req, res) {
   try {
+    // 将 ReadableStream<Uint8Array> 转换为 Buffer
+    let bodyBuffer;
+    try {
+      if (req.body && typeof req.body.getReader === 'function') {
+        // 如果是 ReadableStream
+        bodyBuffer = await streamToBuffer(req.body);
+      } else if (Buffer.isBuffer(req.body)) {
+        // 如果已经是 Buffer
+        bodyBuffer = req.body;
+      } else {
+        // 其他情况，尝试转换
+        bodyBuffer = Buffer.from(req.body);
+      }
+    } catch (error) {
+      return res.status(400).json({
+        error: `请求体转换失败: ${error.message}`
+      });
+    }
+
     // 验证请求体
-    const validation = validateRequestBody(req.body);
+    const validation = validateRequestBody(bodyBuffer);
     if (!validation.valid) {
       return res.status(400).json({
         error: validation.error
@@ -110,9 +162,9 @@ export async function parseEmailHandler(req, res) {
     }
 
     // 将Buffer转换为ArrayBuffer
-    const arrayBuffer = req.body.buffer.slice(
-      req.body.byteOffset, 
-      req.body.byteOffset + req.body.byteLength
+    const arrayBuffer = bodyBuffer.buffer.slice(
+      bodyBuffer.byteOffset, 
+      bodyBuffer.byteOffset + bodyBuffer.byteLength
     );
 
     // 解析邮件
