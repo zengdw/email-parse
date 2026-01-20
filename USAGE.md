@@ -48,13 +48,39 @@ curl -X POST http://localhost:3000/parse \
   --data-binary @examples/sample-email.eml
 ```
 
-### 3. 下载附件
+### 3. 下载附件（两步流程）
+
+#### 步骤1: 获取临时下载链接
 
 ```bash
 curl -X GET http://localhost:3000/attachments/attachment-id \
-  -H "Authorization: Bearer your-api-token" \
-  -o downloaded-file.txt
+  -H "Authorization: Bearer your-api-token"
 ```
+
+响应示例：
+
+```json
+{
+  "downloadUrl": "/attachments/download/temp-token-uuid",
+  "filename": "document.pdf",
+  "size": 1024000,
+  "mimeType": "application/pdf",
+  "expiresIn": "5 minutes"
+}
+```
+
+#### 步骤2: 使用临时链接下载文件
+
+```bash
+curl -X GET http://localhost:3000/attachments/download/temp-token-uuid \
+  -o downloaded-file.pdf
+```
+
+**注意**:
+
+- 临时下载链接无需认证
+- 默认5分钟后过期
+- 每次获取都会生成新的临时token
 
 ## 🧪 运行示例
 
@@ -75,7 +101,9 @@ pnpm example
 ### 可选配置
 
 - `PORT`: 服务端口（默认3000）
+- `DOMAIN`: 服务域名（默认http://localhost:3000）
 - `ATTACHMENT_TTL`: 附件过期时间（默认1小时）
+- `TEMP_TOKEN_TTL`: 临时下载token过期时间（默认5分钟）
 - `MAX_ATTACHMENT_SIZE`: 附件大小限制（默认10MB）
 - `REQUEST_BODY_LIMIT`: 请求体大小限制（默认100mb）
 - `ATTACHMENT_DIR`: 附件存储目录（默认./attachments）
@@ -95,7 +123,16 @@ pnpm example
 
 ### GET /attachments/:id
 
-下载附件，需要 Bearer Token 认证
+获取附件临时下载链接，需要 Bearer Token 认证
+
+返回包含临时下载URL的JSON响应
+
+### GET /attachments/download/:token
+
+使用临时token下载附件，无需认证
+
+- token: 从上一个接口获取的临时token
+- 临时token默认5分钟后过期
 
 ## 🛠️ 开发命令
 

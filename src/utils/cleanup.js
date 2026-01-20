@@ -3,7 +3,7 @@
  * 定期清理过期的附件文件
  */
 
-import { cleanupExpiredAttachments } from '../services/attachmentStorage.js';
+import { cleanupExpiredAttachments, cleanupExpiredTempTokens } from '../services/attachmentStorage.js';
 
 /**
  * 清理定时器实例
@@ -12,16 +12,18 @@ let cleanupTimer = null;
 
 /**
  * 执行清理操作
- * 清理所有过期的附件文件
+ * 清理所有过期的附件文件和临时token
  */
 async function performCleanup() {
   try {
-    const cleanedCount = await cleanupExpiredAttachments();
-    if (cleanedCount > 0) {
-      console.log(`清理完成：删除了 ${cleanedCount} 个过期附件`);
+    const cleanedAttachments = await cleanupExpiredAttachments();
+    const cleanedTokens = cleanupExpiredTempTokens();
+    
+    if (cleanedAttachments > 0 || cleanedTokens > 0) {
+      console.log(`清理完成：删除了 ${cleanedAttachments} 个过期附件，${cleanedTokens} 个过期临时token`);
     }
   } catch (error) {
-    console.error('清理过期附件时发生错误:', error);
+    console.error('清理过期文件时发生错误:', error);
   }
 }
 

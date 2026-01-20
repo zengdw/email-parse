@@ -8,7 +8,7 @@ import config from './config.js';
 import authMiddleware from './middleware/auth.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { parseEmailHandler } from './controllers/parse.js';
-import { downloadAttachmentHandler } from './controllers/attachment.js';
+import { getAttachmentDownloadLinkHandler, downloadAttachmentHandler } from './controllers/attachment.js';
 import { startCleanupTimer, stopCleanupTimer } from './utils/cleanup.js';
 import { renderTemplate } from './utils/template.js';
 
@@ -32,14 +32,17 @@ app.get('/', async (req, res) => {
     res.send(html);
 });
 
+// 注册附件下载路由（使用临时token，不需要认证）
+app.get('/attachments/download/:token', downloadAttachmentHandler);
+
 // 注册认证中间件，保护所有后续路由
 app.use(authMiddleware);
 
 // 注册邮件解析路由
 app.post('/parse', parseEmailHandler);
 
-// 注册附件下载路由
-app.get('/attachments/:id', downloadAttachmentHandler);
+// 注册附件下载链接获取路由（需要认证）
+app.get('/attachments/:id', getAttachmentDownloadLinkHandler);
 
 // 404 错误处理中间件（必须在所有路由之后）
 app.use(notFoundHandler);

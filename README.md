@@ -5,9 +5,10 @@
 ## 功能特性
 
 - 📧 **邮件解析**: 使用 postal-mime 库解析邮件内容
-- 📎 **附件处理**: 支持附件存储和下载，自动处理大小限制
-- 🔐 **Token 验证**: 所有接口需要 Bearer Token 认证
-- 🧹 **自动清理**: 定期清理过期附件文件
+- 📎 **附件处理**: 支持附件存储和安全下载，自动处理大小限制
+- 🔐 **安全下载**: 两步验证下载流程，临时token机制防止直接访问
+- 🔑 **Token 验证**: 所有接口需要 Bearer Token 认证
+- 🧹 **自动清理**: 定期清理过期附件文件和临时token
 - ⚡ **高性能**: 支持大文件处理和并发请求
 - 🛡️ **错误处理**: 统一的错误响应格式
 
@@ -37,7 +38,9 @@ API_TOKEN=your-secret-token-here
 
 # 可选配置（有默认值）
 PORT=3000
+DOMAIN=http://localhost:3000
 ATTACHMENT_TTL=3600000
+TEMP_TOKEN_TTL=300000
 MAX_ATTACHMENT_SIZE=10485760
 REQUEST_BODY_LIMIT=100mb
 ATTACHMENT_DIR=./attachments
@@ -58,14 +61,16 @@ pnpm test
 
 ## 环境变量说明
 
-| 变量名              | 说明                     | 默认值          | 必填 |
-| ------------------- | ------------------------ | --------------- | ---- |
-| PORT                | 服务监听端口             | 3000            | 否   |
-| API_TOKEN           | 接口验证 Token           | 无              | 是   |
-| ATTACHMENT_TTL      | 附件过期时间（毫秒）     | 3600000 (1小时) | 否   |
-| MAX_ATTACHMENT_SIZE | 单个附件大小限制（字节） | 10485760 (10MB) | 否   |
-| REQUEST_BODY_LIMIT  | 请求体大小限制           | 100mb           | 否   |
-| ATTACHMENT_DIR      | 附件存储目录             | ./attachments   | 否   |
+| 变量名              | 说明                      | 默认值                | 必填 |
+| ------------------- | ------------------------- | --------------------- | ---- |
+| PORT                | 服务监听端口              | 3000                  | 否   |
+| DOMAIN              | 服务域名                  | http://localhost:3000 | 否   |
+| API_TOKEN           | 接口验证 Token            | 无                    | 是   |
+| ATTACHMENT_TTL      | 附件过期时间（毫秒）      | 3600000 (1小时)       | 否   |
+| TEMP_TOKEN_TTL      | 临时token过期时间（毫秒） | 300000 (5分钟)        | 否   |
+| MAX_ATTACHMENT_SIZE | 单个附件大小限制（字节）  | 10485760 (10MB)       | 否   |
+| REQUEST_BODY_LIMIT  | 请求体大小限制            | 100mb                 | 否   |
+| ATTACHMENT_DIR      | 附件存储目录              | ./attachments         | 否   |
 
 ## API 接口
 
@@ -113,7 +118,7 @@ Content-Type: application/octet-stream
       "mimeType": "application/pdf",
       "size": 12345,
       "disposition": "attachment",
-      "downloadUrl": "/attachments/abc123"
+      "downloadUrl": "http://localhost:3000/attachments/abc123"
     }
   ]
 }
@@ -127,7 +132,9 @@ Content-Type: application/octet-stream
 }
 ```
 
-### 附件下载
+### 附件下载（两步流程）
+
+#### 步骤1: 获取临时下载链接
 
 ```http
 GET /attachments/:id
@@ -136,8 +143,27 @@ Authorization: Bearer <your-token>
 
 **成功响应 (200):**
 
+```json
+{
+  "downloadUrl": "http://localhost:3000/attachments/download/temp-token-uuid",
+  "filename": "document.pdf",
+  "size": 1024000,
+  "mimeType": "application/pdf",
+  "expiresIn": "5 minutes"
+}
+```
+
+#### 步骤2: 使用临时链接下载文件
+
+```http
+GET /attachments/download/:token
+```
+
+**成功响应 (200):**
+
 - 返回原始文件内容
 - 设置正确的 Content-Type 和 Content-Disposition 头
+- 无需认证，但token有时效性（默认5分钟）
 
 ## 使用示例
 
@@ -403,6 +429,7 @@ docker run -d \
   --name email-parser \
   -p 3000:3000 \
   -e API_TOKEN=your-secret-token \
+  -e DOMAIN=http://localhost:3000 \
   -e ATTACHMENT_TTL=3600000 \
   -e MAX_ATTACHMENT_SIZE=10485760 \
   ghcr.io/your-username/email-parse:latest
@@ -447,6 +474,7 @@ docker run -d \
   --name email-parser \
   -p 3000:3000 \
   -e API_TOKEN=your-secret-token \
+  -e DOMAIN=https://your-domain.com \
   -e PORT=3000 \
   -e ATTACHMENT_TTL=7200000 \
   -e MAX_ATTACHMENT_SIZE=20971520 \

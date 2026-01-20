@@ -15,6 +15,12 @@ import config from '../config.js';
 const attachmentMetadata = new Map();
 
 /**
+ * 临时下载token存储（内存中维护）
+ * 格式: { [tempToken]: { attachmentId, createdAt } }
+ */
+const tempTokens = new Map();
+
+/**
  * 确保附件存储目录存在
  */
 async function ensureAttachmentDir() {
@@ -157,6 +163,67 @@ async function cleanupExpiredAttachments() {
 }
 
 /**
+ * 生成临时下载token
+ * @param {string} attachmentId - 附件ID
+ * @returns {string} 临时token
+ */
+function generateTempToken(attachmentId) {
+  const tempToken = uuidv4();
+  tempTokens.set(tempToken, {
+    attachmentId,
+    createdAt: Date.now()
+  });
+  return tempToken;
+}
+
+/**
+ * 验证临时token并获取附件ID
+ * @param {string} tempToken - 临时token
+ * @returns {string | null} 附件ID，如果token无效或过期返回null
+ */
+function validateTempToken(tempToken) {
+  const tokenData = tempTokens.get(tempToken);
+  
+  if (!tokenData) {
+    return null;
+  }
+  
+  // 检查是否过期
+  const now = Date.now();
+  const isExpired = (now - tokenData.createdAt) > config.tempTokenTtl;
+  
+  if (isExpired) {
+    // 清理过期token
+    tempTokens.delete(tempToken);
+    return null;
+  }
+  
+  return tokenData.attachmentId;
+}
+
+/**
+ * 清理过期的临时token
+ */
+function cleanupExpiredTempTokens() {
+  const now = Date.now();
+  const expiredTokens = [];
+  
+  // 找出所有过期的token
+  for (const [token, tokenData] of tempTokens.entries()) {
+    if ((now - tokenData.createdAt) > config.tempTokenTtl) {
+      expiredTokens.push(token);
+    }
+  }
+  
+  // 清理过期token
+  for (const token of expiredTokens) {
+    tempTokens.delete(token);
+  }
+  
+  return expiredTokens.length;
+}
+
+/**
  * 获取附件元数据（不包含内容）
  * @param {string} attachmentId - 附件ID
  * @returns {object | null} 附件元数据，如果不存在或过期返回null
@@ -186,5 +253,8 @@ export {
   getAttachment,
   cleanupAttachment,
   cleanupExpiredAttachments,
-  getAttachmentMetadata
+  getAttachmentMetadata,
+  generateTempToken,
+  validateTempToken,
+  cleanupExpiredTempTokens
 };
