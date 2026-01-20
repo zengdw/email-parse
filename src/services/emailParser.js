@@ -56,6 +56,75 @@ export function formatSingleAddress(address) {
 }
 
 /**
+ * 处理HTML中的内嵌图片引用
+ * @param {string} html - 原始HTML内容
+ * @param {Array} attachments - 附件数组
+ * @param {Map} cidToAttachmentMap - CID到附件的映射
+ * @returns {string} 处理后的HTML内容
+ */
+function processInlineImages(html, attachments, cidToAttachmentMap) {
+  if (!html || !attachments.length) {
+    return html;
+  }
+
+  // 查找HTML中所有的cid:引用
+  const cidRegex = /src=["']cid:([^"']+)["']/gi;
+  
+  return html.replace(cidRegex, (match, cid) => {
+    // 查找对应的附件
+    const attachment = cidToAttachmentMap.get(cid);
+    if (attachment) {
+      // 标记为内嵌图片
+      attachment.isInline = true;
+      
+      // 使用Base64编码直接嵌入图片
+      if (attachment.content) {
+        try {
+          let contentBuffer;
+          if (attachment.content instanceof ArrayBuffer) {
+            contentBuffer = Buffer.from(attachment.content);
+          } else if (Buffer.isBuffer(attachment.content)) {
+            contentBuffer = attachment.content;
+          } else {
+            contentBuffer = Buffer.from(attachment.content);
+          }
+          
+          const base64Data = contentBuffer.toString('base64');
+          const mimeType = attachment.mimeType || 'image/png';
+          return `src="data:${mimeType};base64,${base64Data}"`;
+        } catch (error) {
+          console.warn(`无法编码内嵌图片 ${cid}:`, error.message);
+          // 如果Base64编码失败，返回错误占位符
+          return `src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+aXoOazleaYvuekujwvdGV4dD48L3N2Zz4=" alt="图片无法显示"`;
+        }
+      }
+    }
+    // 如果没找到对应的附件，保持原样
+    return match;
+  });
+}
+
+/**
+ * 创建Content-ID到附件的映射
+ * @param {Array} attachments - 附件数组
+ * @returns {Map} CID到附件的映射
+ */
+function createCidToAttachmentMap(attachments) {
+  const cidMap = new Map();
+  
+  attachments.forEach(attachment => {
+    // 检查附件是否有Content-ID
+    if (attachment.contentId) {
+      // 移除Content-ID两端的尖括号（如果有的话）
+      const cid = attachment.contentId.replace(/^<|>$/g, '');
+      cidMap.set(cid, attachment);
+    }
+  });
+  
+  return cidMap;
+}
+
+/**
  * 解析邮件内容
  * @param {ArrayBuffer} emailBuffer - 邮件原始数据
  * @returns {Promise<Object>} 解析后的邮件对象
@@ -65,6 +134,12 @@ export async function parseEmail(emailBuffer) {
     // 创建 PostalMime 实例并解析邮件
     const parser = new PostalMime();
     const parsed = await parser.parse(emailBuffer);
+    
+    // 创建CID到附件的映射
+    const cidToAttachmentMap = createCidToAttachmentMap(parsed.attachments || []);
+    
+    // 处理HTML中的内嵌图片
+    const processedHtml = processInlineImages(parsed.html || '', parsed.attachments || [], cidToAttachmentMap);
     
     // 格式化解析结果
     const result = {
@@ -92,11 +167,14 @@ export async function parseEmail(emailBuffer) {
       // 纯文本正文
       text: parsed.text || '',
       
-      // HTML正文
-      html: parsed.html || '',
+      // HTML正文（已处理内嵌图片）
+      html: processedHtml,
       
       // 附件信息
-      attachments: parsed.attachments || []
+      attachments: parsed.attachments || [],
+      
+      // CID映射信息（用于后续处理）
+      cidToAttachmentMap: Object.fromEntries(cidToAttachmentMap)
     };
     
     return result;

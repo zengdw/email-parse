@@ -84,40 +84,49 @@ async function processAttachments(attachments) {
       filename: attachment.filename || 'unnamed',
       mimeType: attachment.mimeType || 'application/octet-stream',
       size: attachment.content ? attachment.content.byteLength || attachment.content.length : 0,
-      disposition: attachment.disposition || 'attachment'
+      disposition: attachment.disposition || 'attachment',
+      contentId: attachment.contentId || null,
+      isInline: attachment.isInline || false
     };
 
-    // 检查附件大小是否超限
-    if (isAttachmentSizeExceeded(attachmentInfo.size)) {
-      // 超限附件标记为跳过
+    // 内嵌图片已经通过Base64编码处理，不需要保存到文件系统
+    if (attachmentInfo.isInline) {
+      // 内嵌图片不提供下载链接
       attachmentInfo.skipped = true;
-      attachmentInfo.skipReason = getSkipReason(attachmentInfo.size);
+      attachmentInfo.skipReason = '内嵌图片已通过Base64编码处理';
     } else {
-      // 保存附件到文件系统
-      try {
-        // 将 ArrayBuffer 转换为 Buffer
-        let contentBuffer;
-        if (attachment.content instanceof ArrayBuffer) {
-          contentBuffer = Buffer.from(attachment.content);
-        } else if (Buffer.isBuffer(attachment.content)) {
-          contentBuffer = attachment.content;
-        } else {
-          // 如果是其他类型，尝试转换
-          contentBuffer = Buffer.from(attachment.content);
-        }
-        
-        const { id, downloadUrl } = await saveAttachment(
-          contentBuffer,
-          attachmentInfo.filename,
-          attachmentInfo.mimeType
-        );
-        
-        attachmentInfo.id = id;
-        attachmentInfo.downloadUrl = downloadUrl;
-      } catch (error) {
-        // 保存失败，标记为跳过
+      // 检查附件大小是否超限
+      if (isAttachmentSizeExceeded(attachmentInfo.size)) {
+        // 超限附件标记为跳过
         attachmentInfo.skipped = true;
-        attachmentInfo.skipReason = `附件保存失败: ${error.message}`;
+        attachmentInfo.skipReason = getSkipReason(attachmentInfo.size);
+      } else {
+        // 保存附件到文件系统
+        try {
+          // 将 ArrayBuffer 转换为 Buffer
+          let contentBuffer;
+          if (attachment.content instanceof ArrayBuffer) {
+            contentBuffer = Buffer.from(attachment.content);
+          } else if (Buffer.isBuffer(attachment.content)) {
+            contentBuffer = attachment.content;
+          } else {
+            // 如果是其他类型，尝试转换
+            contentBuffer = Buffer.from(attachment.content);
+          }
+          
+          const { id, downloadUrl } = await saveAttachment(
+            contentBuffer,
+            attachmentInfo.filename,
+            attachmentInfo.mimeType
+          );
+          
+          attachmentInfo.id = id;
+          attachmentInfo.downloadUrl = downloadUrl;
+        } catch (error) {
+          // 保存失败，标记为跳过
+          attachmentInfo.skipped = true;
+          attachmentInfo.skipReason = `附件保存失败: ${error.message}`;
+        }
       }
     }
 
@@ -125,6 +134,30 @@ async function processAttachments(attachments) {
   }
 
   return processedAttachments;
+}
+
+/**
+ * 替换HTML中的内嵌图片占位符为实际的下载URL
+ * @param {string} html - 包含占位符的HTML内容
+ * @param {Map} cidToUrlMap - CID到下载URL的映射
+ * @returns {string} 替换后的HTML内容
+ */
+function replaceInlineImagePlaceholders(html, cidToUrlMap) {
+  if (!html || cidToUrlMap.size === 0) {
+    return html;
+  }
+
+  // 替换占位符为实际的下载URL
+  const placeholderRegex = /src="{{INLINE_IMAGE:([^}]+)}}"/g;
+  
+  return html.replace(placeholderRegex, (match, cid) => {
+    const downloadUrl = cidToUrlMap.get(cid);
+    if (downloadUrl) {
+      return `src="${downloadUrl}"`;
+    }
+    // 如果没找到对应的URL，返回一个错误占位符
+    return `src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZjBmMGYwIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuWbvueJh+aXoOazleaYvuekujwvdGV4dD48L3N2Zz4=" alt="图片无法显示"`;
+  });
 }
 
 /**

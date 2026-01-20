@@ -1,5 +1,36 @@
 # 更新日志
 
+## v1.0.4 (2026-01-20)
+
+### ✨ 新功能
+
+- **内嵌图片Base64编码**: 解决邮件HTML中内嵌图片无法显示的问题
+  - 自动识别HTML中的 `cid:` 图片引用
+  - 将内嵌图片转换为Base64编码直接嵌入HTML
+  - 图片永不过期，不受附件TTL限制
+  - 邮件内容完全自包含，无需外部资源
+
+### 🐛 Bug 修复
+
+- **邮件图片显示**: 修复了邮件HTML中使用 `<img src="cid:xxx">` 引用的图片无法显示的问题
+- **Content-ID映射**: 正确处理附件的Content-ID与HTML中cid引用的关联关系
+
+### 🏗️ 技术改进
+
+- **邮件解析增强**:
+  - 新增 `createCidToAttachmentMap()` 函数建立CID到附件的映射
+  - 新增 `processInlineImages()` 函数处理HTML中的内嵌图片
+  - 支持多种图片格式的Base64编码（PNG、JPEG、GIF等）
+- **附件处理优化**:
+  - 内嵌图片标记为 `isInline: true`
+  - 内嵌图片不保存到文件系统，减少存储占用
+  - 增加 `contentId` 字段记录附件的Content-ID
+
+### 📝 代码变更
+
+- `src/services/emailParser.js`: 增强邮件解析，支持内嵌图片Base64编码
+- `src/controllers/parse.js`: 优化附件处理逻辑，区分内嵌图片和普通附件
+
 ## v1.0.3 (2026-01-20)
 
 ### ✨ 新功能
