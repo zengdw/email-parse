@@ -118,10 +118,10 @@ export function validateEmailData(emailBuffer) {
   // 基本的邮件格式检查 - 查找邮件头部标识
   const uint8Array = new Uint8Array(emailBuffer);
   const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.slice(0, 1000));
-  
+
   // 检查是否包含基本的邮件头部字段
-  const hasHeaders = /^(From|To|Subject|Date|Message-ID):/mi.test(text) ||
-                    /\r?\n(From|To|Subject|Date|Message-ID):/mi.test(text);
+  const hasHeaders = /^(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text) ||
+                    /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text);
   
   return hasHeaders;
 }
