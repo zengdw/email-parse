@@ -10,6 +10,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import { parseEmailHandler } from './controllers/parse.js';
 import { downloadAttachmentHandler } from './controllers/attachment.js';
 import { startCleanupTimer, stopCleanupTimer } from './utils/cleanup.js';
+import { renderTemplate } from './utils/template.js';
 
 // 创建 Express 应用实例
 const app = express();
@@ -20,6 +21,15 @@ app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 // 健康检查端点（不需要认证）
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// 根路由 
+app.get('/', async (req, res) => {
+    const html = renderTemplate('index.html', {
+        PORT: config.port
+    });
+    
+    res.send(html);
 });
 
 // 注册认证中间件，保护所有后续路由

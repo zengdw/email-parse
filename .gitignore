@@ -4,3 +4,5 @@ downloads/
 coverage/
 test-attachments/
 test-attachments-property/
+
+.env
