@@ -77,6 +77,7 @@ pnpm example
 - `PORT`: 服务端口（默认3000）
 - `ATTACHMENT_TTL`: 附件过期时间（默认1小时）
 - `MAX_ATTACHMENT_SIZE`: 附件大小限制（默认10MB）
+- `REQUEST_BODY_LIMIT`: 请求体大小限制（默认100mb）
 - `ATTACHMENT_DIR`: 附件存储目录（默认./attachments）
 
 ## 📝 API 接口

@@ -39,6 +39,7 @@ API_TOKEN=your-secret-token-here
 PORT=3000
 ATTACHMENT_TTL=3600000
 MAX_ATTACHMENT_SIZE=10485760
+REQUEST_BODY_LIMIT=100mb
 ATTACHMENT_DIR=./attachments
 ```
 
@@ -63,6 +64,7 @@ pnpm test
 | API_TOKEN           | 接口验证 Token           | 无              | 是   |
 | ATTACHMENT_TTL      | 附件过期时间（毫秒）     | 3600000 (1小时) | 否   |
 | MAX_ATTACHMENT_SIZE | 单个附件大小限制（字节） | 10485760 (10MB) | 否   |
+| REQUEST_BODY_LIMIT  | 请求体大小限制           | 100mb           | 否   |
 | ATTACHMENT_DIR      | 附件存储目录             | ./attachments   | 否   |
 
 ## API 接口
@@ -448,6 +450,7 @@ docker run -d \
   -e PORT=3000 \
   -e ATTACHMENT_TTL=7200000 \
   -e MAX_ATTACHMENT_SIZE=20971520 \
+  -e REQUEST_BODY_LIMIT=100mb \
   -v $(pwd)/attachments:/app/attachments \
   email-parser
 ```

@@ -16,7 +16,7 @@ import { renderTemplate } from './utils/template.js';
 const app = express();
 
 // 解析原始二进制数据
-app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
+app.use(express.raw({ type: 'application/octet-stream', limit: config.requestBodyLimit }));
 
 // 健康检查端点（不需要认证）
 app.get('/health', (req, res) => {

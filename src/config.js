@@ -21,6 +21,9 @@ const config = {
   // 单个附件大小限制（字节）
   maxAttachmentSize: parseInt(process.env.MAX_ATTACHMENT_SIZE || '10485760', 10),
   
+  // 请求体大小限制（字符串格式，如 '50mb'）
+  requestBodyLimit: process.env.REQUEST_BODY_LIMIT || '50mb',
+  
   // 附件存储目录
   attachmentDir: process.env.ATTACHMENT_DIR || './attachments'
 };
