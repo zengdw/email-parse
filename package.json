@@ -13,7 +13,7 @@
     "example": "node examples/client-example.js",
     "setup": "cp .env.example .env && echo '请编辑 .env 文件设置您的配置'",
     "clean": "node scripts/clean.js",
-    "quickstart": "node scripts/quick-start.js"
+    "qs": "node scripts/quick-start.js"
   },
   "keywords": [],
   "author": "",
