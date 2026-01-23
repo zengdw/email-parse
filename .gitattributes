@@ -1,0 +1,9 @@
+# 强制所有文本文件在提交时转换为 LF
+* text=auto eol=lf
+
+# 也可以针对特定后缀名进行设置
+# *.js text eol=lf
+
+# 确保二进制文件不被触碰
+*.png binary
+*.jpg binary

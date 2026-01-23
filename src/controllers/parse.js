@@ -4,10 +4,10 @@
  */
 
 import { parseEmail, validateEmailData } from '../services/emailParser.js';
-import { 
-  isAttachmentSizeExceeded, 
-  getSkipReason, 
-  saveAttachment 
+import {
+  isAttachmentSizeExceeded,
+  getSkipReason,
+  saveAttachment
 } from '../services/attachmentStorage.js';
 
 /**
@@ -18,7 +18,7 @@ import {
 async function streamToBuffer(stream) {
   const reader = stream.getReader();
   const chunks = [];
-  
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -28,10 +28,10 @@ async function streamToBuffer(stream) {
   } finally {
     reader.releaseLock();
   }
-  
+
   // 计算总长度
   const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  
+
   // 合并所有 chunks
   const result = new Uint8Array(totalLength);
   let offset = 0;
@@ -39,7 +39,7 @@ async function streamToBuffer(stream) {
     result.set(chunk, offset);
     offset += chunk.length;
   }
-  
+
   return Buffer.from(result);
 }
 
@@ -59,7 +59,7 @@ function validateRequestBody(body) {
 
   // 将Buffer转换为ArrayBuffer进行邮件格式验证
   const arrayBuffer = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength);
-  
+
   // 验证邮件数据格式
   if (!validateEmailData(arrayBuffer)) {
     return {
@@ -90,11 +90,7 @@ async function processAttachments(attachments) {
     };
 
     // 内嵌图片已经通过Base64编码处理，不需要保存到文件系统
-    if (attachmentInfo.isInline) {
-      // 内嵌图片不提供下载链接
-      attachmentInfo.skipped = true;
-      attachmentInfo.skipReason = '内嵌图片已通过Base64编码处理';
-    } else {
+    if (!attachmentInfo.isInline) {
       // 检查附件大小是否超限
       if (isAttachmentSizeExceeded(attachmentInfo.size)) {
         // 超限附件标记为跳过
@@ -113,13 +109,13 @@ async function processAttachments(attachments) {
             // 如果是其他类型，尝试转换
             contentBuffer = Buffer.from(attachment.content);
           }
-          
+
           const { id, downloadUrl } = await saveAttachment(
             contentBuffer,
             attachmentInfo.filename,
             attachmentInfo.mimeType
           );
-          
+
           attachmentInfo.id = id;
           attachmentInfo.downloadUrl = downloadUrl;
         } catch (error) {
@@ -128,9 +124,9 @@ async function processAttachments(attachments) {
           attachmentInfo.skipReason = `附件保存失败: ${error.message}`;
         }
       }
-    }
 
-    processedAttachments.push(attachmentInfo);
+      processedAttachments.push(attachmentInfo);
+    }
   }
 
   return processedAttachments;
@@ -149,7 +145,7 @@ function replaceInlineImagePlaceholders(html, cidToUrlMap) {
 
   // 替换占位符为实际的下载URL
   const placeholderRegex = /src="{{INLINE_IMAGE:([^}]+)}}"/g;
-  
+
   return html.replace(placeholderRegex, (match, cid) => {
     const downloadUrl = cidToUrlMap.get(cid);
     if (downloadUrl) {
@@ -196,7 +192,7 @@ export async function parseEmailHandler(req, res) {
 
     // 将Buffer转换为ArrayBuffer
     const arrayBuffer = bodyBuffer.buffer.slice(
-      bodyBuffer.byteOffset, 
+      bodyBuffer.byteOffset,
       bodyBuffer.byteOffset + bodyBuffer.byteLength
     );
 

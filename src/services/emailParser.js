@@ -1,6 +1,38 @@
 import PostalMime from 'postal-mime';
 
 /**
+ * 将日期转换为北京时间格式 (UTC+8)
+ * @param {string|Date} dateInput - 输入的日期
+ * @returns {string} 格式化后的日期字符串 (yyyy-MM-dd HH:mm:ss)
+ */
+function formatDateToBeijingTime(dateInput) {
+  try {
+    const date = new Date(dateInput);
+
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      return null;
+    }
+
+    // 转换为北京时间 (UTC+8)
+    const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+
+    // 格式化为 yyyy-MM-dd HH:mm:ss
+    const year = beijingTime.getUTCFullYear();
+    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(beijingTime.getUTCDate()).padStart(2, '0');
+    const hours = String(beijingTime.getUTCHours()).padStart(2, '0');
+    const minutes = String(beijingTime.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(beijingTime.getUTCSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  } catch (error) {
+    console.warn('日期格式化失败:', error.message);
+    return null;
+  }
+}
+
+/**
  * 格式化邮件地址，确保包含 name 和 address 字段
  * @param {Object|Array} addresses - 地址对象或地址数组
  * @returns {Object|Array} 格式化后的地址
@@ -12,7 +44,7 @@ export function formatAddresses(addresses) {
 
   // 如果是单个地址对象，转换为数组处理
   const addressArray = Array.isArray(addresses) ? addresses : [addresses];
-  
+
   return addressArray.map(addr => {
     if (typeof addr === 'string') {
       // 如果是纯字符串，尝试解析
@@ -32,7 +64,7 @@ export function formatAddresses(addresses) {
         };
       }
     }
-    
+
     // 如果已经是对象，确保包含必需字段
     return {
       name: addr.name || addr.address || '',
@@ -69,14 +101,14 @@ function processInlineImages(html, attachments, cidToAttachmentMap) {
 
   // 查找HTML中所有的cid:引用
   const cidRegex = /src=["']cid:([^"']+)["']/gi;
-  
+
   return html.replace(cidRegex, (match, cid) => {
     // 查找对应的附件
     const attachment = cidToAttachmentMap.get(cid);
     if (attachment) {
       // 标记为内嵌图片
       attachment.isInline = true;
-      
+
       // 使用Base64编码直接嵌入图片
       if (attachment.content) {
         try {
@@ -88,7 +120,7 @@ function processInlineImages(html, attachments, cidToAttachmentMap) {
           } else {
             contentBuffer = Buffer.from(attachment.content);
           }
-          
+
           const base64Data = contentBuffer.toString('base64');
           const mimeType = attachment.mimeType || 'image/png';
           return `src="data:${mimeType};base64,${base64Data}"`;
@@ -111,7 +143,7 @@ function processInlineImages(html, attachments, cidToAttachmentMap) {
  */
 function createCidToAttachmentMap(attachments) {
   const cidMap = new Map();
-  
+
   attachments.forEach(attachment => {
     // 检查附件是否有Content-ID
     if (attachment.contentId) {
@@ -120,7 +152,7 @@ function createCidToAttachmentMap(attachments) {
       cidMap.set(cid, attachment);
     }
   });
-  
+
   return cidMap;
 }
 
@@ -134,49 +166,49 @@ export async function parseEmail(emailBuffer) {
     // 创建 PostalMime 实例并解析邮件
     const parser = new PostalMime();
     const parsed = await parser.parse(emailBuffer);
-    
+
     // 创建CID到附件的映射
     const cidToAttachmentMap = createCidToAttachmentMap(parsed.attachments || []);
-    
+
     // 处理HTML中的内嵌图片
     const processedHtml = processInlineImages(parsed.html || '', parsed.attachments || [], cidToAttachmentMap);
-    
+
     // 格式化解析结果
     const result = {
       // 发件人信息（单个对象）
       from: formatSingleAddress(parsed.from),
-      
+
       // 收件人信息（数组）
       to: formatAddresses(parsed.to),
-      
+
       // 抄送信息（数组）
       cc: formatAddresses(parsed.cc),
-      
+
       // 密送信息（数组）
       bcc: formatAddresses(parsed.bcc),
-      
+
       // 邮件主题
       subject: parsed.subject || '',
-      
-      // 邮件日期
-      date: parsed.date ? new Date(parsed.date).toISOString() : null,
-      
+
+      // 邮件日期 (+8时区，格式: yyyy-MM-dd HH:mm:ss)
+      date: parsed.date ? formatDateToBeijingTime(parsed.date) : null,
+
       // 邮件ID
       messageId: parsed.messageId || '',
-      
+
       // 纯文本正文
       text: parsed.text || '',
-      
+
       // HTML正文（已处理内嵌图片）
       html: processedHtml,
-      
+
       // 附件信息
       attachments: parsed.attachments || [],
-      
+
       // CID映射信息（用于后续处理）
       cidToAttachmentMap: Object.fromEntries(cidToAttachmentMap)
     };
-    
+
     return result;
   } catch (error) {
     throw new Error(`邮件解析失败: ${error.message}`);
@@ -192,15 +224,15 @@ export function validateEmailData(emailBuffer) {
   if (!emailBuffer || emailBuffer.byteLength === 0) {
     return false;
   }
-  
+
   // 基本的邮件格式检查 - 查找邮件头部标识
   const uint8Array = new Uint8Array(emailBuffer);
   const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.slice(0, 1000));
 
   // 检查是否包含基本的邮件头部字段
   const hasHeaders = /^(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text) ||
-                    /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text);
-  
+    /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text);
+
   return hasHeaders;
 }
 
