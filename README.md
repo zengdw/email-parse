@@ -44,6 +44,7 @@ TEMP_TOKEN_TTL=300000
 MAX_ATTACHMENT_SIZE=10485760
 REQUEST_BODY_LIMIT=100mb
 ATTACHMENT_DIR=./attachments
+NODE_ENV=production
 ```
 
 ### 启动服务
@@ -71,6 +72,7 @@ pnpm test
 | MAX_ATTACHMENT_SIZE | 单个附件大小限制（字节）  | 10485760 (10MB)       | 否   |
 | REQUEST_BODY_LIMIT  | 请求体大小限制            | 100mb                 | 否   |
 | ATTACHMENT_DIR      | 附件存储目录              | ./attachments         | 否   |
+| NODE_ENV            | Node.js环境              | development         | 否   |
 
 ## API 接口
 
@@ -197,20 +199,31 @@ async function parseEmail(emailFilePath) {
   return await response.json();
 }
 
-// 下载附件
+// 下载附件（两步流程）
 async function downloadAttachment(attachmentId, outputPath) {
-  const response = await fetch(`${BASE_URL}/attachments/${attachmentId}`, {
+  // 第一步：获取临时下载链接
+  const linkResponse = await fetch(`${BASE_URL}/attachments/${attachmentId}`, {
     headers: {
       Authorization: `Bearer ${API_TOKEN}`,
     },
   });
 
-  if (!response.ok) {
-    const error = await response.json();
+  if (!linkResponse.ok) {
+    const error = await linkResponse.json();
     throw new Error(error.error);
   }
 
-  const buffer = await response.buffer();
+  const linkData = await linkResponse.json();
+  
+  // 第二步：使用临时链接下载文件
+  const downloadResponse = await fetch(linkData.downloadUrl);
+
+  if (!downloadResponse.ok) {
+    const error = await downloadResponse.json().catch(() => ({ error: downloadResponse.statusText }));
+    throw new Error(error.error);
+  }
+
+  const buffer = await downloadResponse.buffer();
   fs.writeFileSync(outputPath, buffer);
 }
 
@@ -244,9 +257,13 @@ curl -X POST http://localhost:3000/parse \
   -H "Content-Type: application/octet-stream" \
   --data-binary @sample-email.eml
 
-# 下载附件
+# 下载附件（两步流程）
+# 步骤1：获取临时下载链接
 curl -X GET http://localhost:3000/attachments/abc123 \
-  -H "Authorization: Bearer your-secret-token" \
+  -H "Authorization: Bearer your-secret-token"
+
+# 步骤2：使用返回的临时链接下载文件
+curl -X GET "http://localhost:3000/attachments/download/temp-token-uuid" \
   -o downloaded-file.pdf
 ```
 
@@ -277,6 +294,7 @@ def parse_email(email_file_path):
     return response.json()
 
 def download_attachment(attachment_id, output_path):
+    # 第一步：获取临时下载链接
     response = requests.get(
         f'{BASE_URL}/attachments/{attachment_id}',
         headers={'Authorization': f'Bearer {API_TOKEN}'}
@@ -285,8 +303,17 @@ def download_attachment(attachment_id, output_path):
     if response.status_code != 200:
         raise Exception(response.json()['error'])
 
+    link_data = response.json()
+    
+    # 第二步：使用临时链接下载文件
+    download_response = requests.get(link_data['downloadUrl'])
+
+    if download_response.status_code != 200:
+        error_msg = download_response.json().get('error', download_response.text) if download_response.headers.get('content-type', '').startswith('application/json') else download_response.text
+        raise Exception(error_msg)
+
     with open(output_path, 'wb') as f:
-        f.write(response.content)
+        f.write(download_response.content)
 
 # 使用示例
 try:
