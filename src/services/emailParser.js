@@ -233,6 +233,9 @@ export function validateEmailData(emailBuffer) {
   const hasHeaders = /^(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text) ||
     /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text);
 
+  if (!hasHeaders) {
+    console.log(text);
+  }
   return hasHeaders;
 }
 
