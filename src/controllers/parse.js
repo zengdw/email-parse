@@ -3,12 +3,12 @@
  * 处理 POST /parse 请求，解析邮件并处理附件
  */
 
-import { parseEmail, validateEmailData } from '../services/emailParser.js';
+import { parseEmail, validateEmailData } from "../services/emailParser.js";
 import {
   isAttachmentSizeExceeded,
   getSkipReason,
-  saveAttachment
-} from '../services/attachmentStorage.js';
+  saveAttachment,
+} from "../services/attachmentStorage.js";
 
 /**
  * 将 ReadableStream<Uint8Array> 转换为 Buffer
@@ -53,18 +53,21 @@ function validateRequestBody(body) {
   if (!body || body.length === 0) {
     return {
       valid: false,
-      error: '请求体不能为空'
+      error: "请求体不能为空",
     };
   }
 
   // 将Buffer转换为ArrayBuffer进行邮件格式验证
-  const arrayBuffer = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength);
+  const arrayBuffer = body.buffer.slice(
+    body.byteOffset,
+    body.byteOffset + body.byteLength,
+  );
 
   // 验证邮件数据格式
   if (!validateEmailData(arrayBuffer)) {
     return {
       valid: false,
-      error: '无效的邮件格式'
+      error: "无效的邮件格式",
     };
   }
 
@@ -81,12 +84,14 @@ async function processAttachments(attachments) {
 
   for (const attachment of attachments) {
     const attachmentInfo = {
-      filename: attachment.filename || 'unnamed',
-      mimeType: attachment.mimeType || 'application/octet-stream',
-      size: attachment.content ? attachment.content.byteLength || attachment.content.length : 0,
-      disposition: attachment.disposition || 'attachment',
+      filename: attachment.filename || "unnamed",
+      mimeType: attachment.mimeType || "application/octet-stream",
+      size: attachment.content
+        ? attachment.content.byteLength || attachment.content.length
+        : 0,
+      disposition: attachment.disposition || "attachment",
       contentId: attachment.contentId || null,
-      isInline: attachment.isInline || false
+      isInline: attachment.isInline || false,
     };
 
     // 内嵌图片已经通过Base64编码处理，不需要保存到文件系统
@@ -113,7 +118,7 @@ async function processAttachments(attachments) {
           const { id, downloadUrl } = await saveAttachment(
             contentBuffer,
             attachmentInfo.filename,
-            attachmentInfo.mimeType
+            attachmentInfo.mimeType,
           );
 
           attachmentInfo.id = id;
@@ -166,7 +171,7 @@ export async function parseEmailHandler(req, res) {
     // 将 ReadableStream<Uint8Array> 转换为 Buffer
     let bodyBuffer;
     try {
-      if (req.body && typeof req.body.getReader === 'function') {
+      if (req.body && typeof req.body.getReader === "function") {
         // 如果是 ReadableStream
         bodyBuffer = await streamToBuffer(req.body);
       } else if (Buffer.isBuffer(req.body)) {
@@ -178,22 +183,22 @@ export async function parseEmailHandler(req, res) {
       }
     } catch (error) {
       return res.status(400).json({
-        error: `请求体转换失败: ${error.message}`
+        error: `请求体转换失败: ${error.message}`,
       });
     }
 
     // 验证请求体
-    const validation = validateRequestBody(bodyBuffer);
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: validation.error
-      });
-    }
+    // const validation = validateRequestBody(bodyBuffer);
+    // if (!validation.valid) {
+    //   return res.status(400).json({
+    //     error: validation.error
+    //   });
+    // }
 
     // 将Buffer转换为ArrayBuffer
     const arrayBuffer = bodyBuffer.buffer.slice(
       bodyBuffer.byteOffset,
-      bodyBuffer.byteOffset + bodyBuffer.byteLength
+      bodyBuffer.byteOffset + bodyBuffer.byteLength,
     );
 
     // 解析邮件
@@ -202,12 +207,14 @@ export async function parseEmailHandler(req, res) {
       parsedEmail = await parseEmail(arrayBuffer);
     } catch (error) {
       return res.status(400).json({
-        error: `邮件解析失败: ${error.message}`
+        error: `邮件解析失败: ${error.message}`,
       });
     }
 
     // 处理附件
-    const processedAttachments = await processAttachments(parsedEmail.attachments || []);
+    const processedAttachments = await processAttachments(
+      parsedEmail.attachments || [],
+    );
 
     // 构建响应对象
     const response = {
@@ -220,21 +227,20 @@ export async function parseEmailHandler(req, res) {
       messageId: parsedEmail.messageId,
       text: parsedEmail.text,
       html: parsedEmail.html,
-      attachments: processedAttachments
+      attachments: processedAttachments,
     };
 
     // 返回解析结果
     res.status(200).json(response);
-
   } catch (error) {
     // 服务器内部错误
-    console.error('邮件解析控制器错误:', error);
+    console.error("邮件解析控制器错误:", error);
     res.status(500).json({
-      error: '服务器内部错误'
+      error: "服务器内部错误",
     });
   }
 }
 
 export default {
-  parseEmailHandler
+  parseEmailHandler,
 };
