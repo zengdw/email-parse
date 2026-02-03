@@ -248,12 +248,6 @@ export function validateEmailData(emailBuffer) {
     /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/im.test(
       text,
     );
-
-  if (!hasHeaders) {
-    console.log("邮件内容", text);
-  }
-
-  console.log("正常内容", text);
   return hasHeaders;
 }
 
