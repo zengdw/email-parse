@@ -1,4 +1,4 @@
-import PostalMime from 'postal-mime';
+import PostalMime from "postal-mime";
 
 /**
  * 将日期转换为北京时间格式 (UTC+8)
@@ -15,19 +15,19 @@ function formatDateToBeijingTime(dateInput) {
     }
 
     // 转换为北京时间 (UTC+8)
-    const beijingTime = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+    const beijingTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
 
     // 格式化为 yyyy-MM-dd HH:mm:ss
     const year = beijingTime.getUTCFullYear();
-    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(beijingTime.getUTCDate()).padStart(2, '0');
-    const hours = String(beijingTime.getUTCHours()).padStart(2, '0');
-    const minutes = String(beijingTime.getUTCMinutes()).padStart(2, '0');
-    const seconds = String(beijingTime.getUTCSeconds()).padStart(2, '0');
+    const month = String(beijingTime.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(beijingTime.getUTCDate()).padStart(2, "0");
+    const hours = String(beijingTime.getUTCHours()).padStart(2, "0");
+    const minutes = String(beijingTime.getUTCMinutes()).padStart(2, "0");
+    const seconds = String(beijingTime.getUTCSeconds()).padStart(2, "0");
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   } catch (error) {
-    console.warn('日期格式化失败:', error.message);
+    console.warn("日期格式化失败:", error.message);
     return null;
   }
 }
@@ -45,30 +45,33 @@ export function formatAddresses(addresses) {
   // 如果是单个地址对象，转换为数组处理
   const addressArray = Array.isArray(addresses) ? addresses : [addresses];
 
-  return addressArray.map(addr => {
-    if (typeof addr === 'string') {
+  return addressArray.map((addr) => {
+    if (typeof addr === "string") {
       // 如果是纯字符串，尝试解析
       const emailMatch = addr.match(/<(.+?)>/);
       if (emailMatch) {
         // 格式: "Name <email@domain.com>"
-        const name = addr.replace(/<.+?>/, '').trim().replace(/^["']|["']$/g, '');
+        const name = addr
+          .replace(/<.+?>/, "")
+          .trim()
+          .replace(/^["']|["']$/g, "");
         return {
           name: name || emailMatch[1],
-          address: emailMatch[1]
+          address: emailMatch[1],
         };
       } else {
         // 纯邮箱地址
         return {
           name: addr,
-          address: addr
+          address: addr,
         };
       }
     }
 
     // 如果已经是对象，确保包含必需字段
     return {
-      name: addr.name || addr.address || '',
-      address: addr.address || addr.email || ''
+      name: addr.name || addr.address || "",
+      address: addr.address || addr.email || "",
     };
   });
 }
@@ -80,11 +83,11 @@ export function formatAddresses(addresses) {
  */
 export function formatSingleAddress(address) {
   if (!address) {
-    return { name: '', address: '' };
+    return { name: "", address: "" };
   }
 
   const formatted = formatAddresses(address);
-  return formatted[0] || { name: '', address: '' };
+  return formatted[0] || { name: "", address: "" };
 }
 
 /**
@@ -121,8 +124,8 @@ function processInlineImages(html, attachments, cidToAttachmentMap) {
             contentBuffer = Buffer.from(attachment.content);
           }
 
-          const base64Data = contentBuffer.toString('base64');
-          const mimeType = attachment.mimeType || 'image/png';
+          const base64Data = contentBuffer.toString("base64");
+          const mimeType = attachment.mimeType || "image/png";
           return `src="data:${mimeType};base64,${base64Data}"`;
         } catch (error) {
           console.warn(`无法编码内嵌图片 ${cid}:`, error.message);
@@ -144,11 +147,11 @@ function processInlineImages(html, attachments, cidToAttachmentMap) {
 function createCidToAttachmentMap(attachments) {
   const cidMap = new Map();
 
-  attachments.forEach(attachment => {
+  attachments.forEach((attachment) => {
     // 检查附件是否有Content-ID
     if (attachment.contentId) {
       // 移除Content-ID两端的尖括号（如果有的话）
-      const cid = attachment.contentId.replace(/^<|>$/g, '');
+      const cid = attachment.contentId.replace(/^<|>$/g, "");
       cidMap.set(cid, attachment);
     }
   });
@@ -168,10 +171,16 @@ export async function parseEmail(emailBuffer) {
     const parsed = await parser.parse(emailBuffer);
 
     // 创建CID到附件的映射
-    const cidToAttachmentMap = createCidToAttachmentMap(parsed.attachments || []);
+    const cidToAttachmentMap = createCidToAttachmentMap(
+      parsed.attachments || [],
+    );
 
     // 处理HTML中的内嵌图片
-    const processedHtml = processInlineImages(parsed.html || '', parsed.attachments || [], cidToAttachmentMap);
+    const processedHtml = processInlineImages(
+      parsed.html || "",
+      parsed.attachments || [],
+      cidToAttachmentMap,
+    );
 
     // 格式化解析结果
     const result = {
@@ -188,16 +197,16 @@ export async function parseEmail(emailBuffer) {
       bcc: formatAddresses(parsed.bcc),
 
       // 邮件主题
-      subject: parsed.subject || '',
+      subject: parsed.subject || "",
 
       // 邮件日期 (+8时区，格式: yyyy-MM-dd HH:mm:ss)
       date: parsed.date ? formatDateToBeijingTime(parsed.date) : null,
 
       // 邮件ID
-      messageId: parsed.messageId || '',
+      messageId: parsed.messageId || "",
 
       // 纯文本正文
-      text: parsed.text || '',
+      text: parsed.text || "",
 
       // HTML正文（已处理内嵌图片）
       html: processedHtml,
@@ -206,7 +215,7 @@ export async function parseEmail(emailBuffer) {
       attachments: parsed.attachments || [],
 
       // CID映射信息（用于后续处理）
-      cidToAttachmentMap: Object.fromEntries(cidToAttachmentMap)
+      cidToAttachmentMap: Object.fromEntries(cidToAttachmentMap),
     };
 
     return result;
@@ -227,15 +236,24 @@ export function validateEmailData(emailBuffer) {
 
   // 基本的邮件格式检查 - 查找邮件头部标识
   const uint8Array = new Uint8Array(emailBuffer);
-  const text = new TextDecoder('utf-8', { fatal: false }).decode(uint8Array.slice(0, 1000));
+  const text = new TextDecoder("utf-8", { fatal: false }).decode(
+    uint8Array.slice(0, 1000),
+  );
 
   // 检查是否包含基本的邮件头部字段
-  const hasHeaders = /^(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text) ||
-    /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/mi.test(text);
+  const hasHeaders =
+    /^(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/im.test(
+      text,
+    ) ||
+    /\r?\n(From|To|Subject|Date|Message-ID|Received|Return-Path|Delivered-To):/im.test(
+      text,
+    );
 
   if (!hasHeaders) {
-    console.log(text);
+    console.log("邮件内容", text);
   }
+
+  console.log("正常内容", text);
   return hasHeaders;
 }
 
@@ -243,5 +261,5 @@ export default {
   parseEmail,
   validateEmailData,
   formatAddresses,
-  formatSingleAddress
+  formatSingleAddress,
 };
